@@ -1,0 +1,3 @@
+- Conventional commits: feat|fix|chore|docs|refactor|test(scope): summary
+- Keep PRs ≤500 lines; split otherwise.
+- Always update TODO.yaml, progress.json, journal.md.
