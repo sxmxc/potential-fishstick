@@ -14,7 +14,9 @@ from app.db.models import Event, EventMetric, EventTag, Incident
 
 
 def _alembic_config(db_url: str) -> Config:
-    cfg = Config(str(Path(__file__).resolve().parents[2] / "alembic.ini"))
+    project_root = Path(__file__).resolve().parents[2]
+    cfg = Config(str(project_root / "alembic.ini"))
+    cfg.set_main_option("script_location", str(project_root / "alembic"))
     cfg.set_main_option("sqlalchemy.url", db_url)
     return cfg
 
