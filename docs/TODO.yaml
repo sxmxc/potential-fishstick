@@ -1,0 +1,61 @@
+version: 1
+updated_at: "2025-09-21T00:00:00Z"
+milestone: M2_e2e_path
+priority_scale: [P0, P1, P2, P3]
+
+backlog:
+  - id: M2-DB
+    title: "Implement SQLAlchemy models & Alembic migrations"
+    status: todo
+    priority: P0
+    depends_on: []
+    est_hours: 3
+    acceptance:
+      - "Alembic migration applies and downgrades cleanly"
+      - "CRUD unit tests pass"
+
+  - id: M2-API
+    title: "Add /events (POST/GET) and /incidents (GET) with validation"
+    status: todo
+    priority: P0
+    depends_on: [M2-DB]
+    est_hours: 4
+    acceptance:
+      - "Pydantic models mirror CES"
+      - "Filters & pagination covered by tests"
+      - "OpenAPI examples added"
+
+  - id: M2-PIPE
+    title: "Inline worker: features → score → explain → correlate"
+    status: todo
+    priority: P0
+    depends_on: [M2-API]
+    est_hours: 4
+    acceptance:
+      - "On POST, event scored and optionally merged to incident"
+      - "Unit + integration tests green"
+
+  - id: M2-WEB
+    title: "Web UI fetch /events & /incidents (replace demo)"
+    status: todo
+    priority: P1
+    depends_on: [M2-API]
+    est_hours: 2
+    acceptance:
+      - "Lists render with loading/empty/error states"
+      - "Jest test mocks API"
+
+  - id: M2-QUALITY
+    title: "Quality gates + coverage ≥85% for touched backend modules"
+    status: todo
+    priority: P1
+    depends_on: [M2-PIPE]
+    est_hours: 2
+    acceptance:
+      - "`make test` passes in containers"
+      - "black/ruff/mypy clean"
+
+in_progress: []
+done: []
+notes:
+  - "Codex should add any discovered sub-tasks here as it works."
