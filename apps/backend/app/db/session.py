@@ -4,13 +4,14 @@ import os
 from typing import Generator
 
 from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.orm import Session, sessionmaker
 
 DEFAULT_SQLITE_URL = "sqlite+pysqlite:///./signalos.db"
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, expire_on_commit=False, future=True)
 _engine: Engine | None = None
+_engine_url: str | None = None
 
 
 def get_database_url() -> str:
@@ -27,11 +28,13 @@ def get_database_url() -> str:
 
 
 def get_engine(url: str | None = None) -> Engine:
-    global _engine
+    global _engine, _engine_url
     resolved = url or get_database_url()
-    if _engine is None or str(_engine.url) != resolved:
-        _engine = create_engine(resolved, echo=False, future=True, pool_pre_ping=True)
+    normalized = str(make_url(resolved))
+    if _engine is None or _engine_url != normalized:
+        _engine = create_engine(normalized, echo=False, future=True, pool_pre_ping=True)
         SessionLocal.configure(bind=_engine)
+        _engine_url = str(_engine.url)
     return _engine
 
 
