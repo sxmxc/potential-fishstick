@@ -1,0 +1,49 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: signal
+      POSTGRES_PASSWORD: signal
+      POSTGRES_DB: signalos
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports: ["5432:5432"]
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    volumes:
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    ports: ["6379:6379"]
+
+  minio:
+    image: minio/minio:RELEASE.2024-05-28T17-19-04Z
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio:/data
+    ports: ["9000:9000", "9001:9001"]
+
+  api:
+    build: ../apps/backend
+    env_file: ../apps/backend/.env.example
+    depends_on: [postgres, redis, minio]
+    ports: ["8000:8000"]
+
+  web:
+    build: ../apps/web
+    env_file: ../apps/web/.env.example
+    depends_on: [api]
+    ports: ["3000:3000"]
+
+  nginx:
+    build: ./docker/nginx
+    ports: ["8080:80"]
+    depends_on: [web, api]
+
+volumes:
+  pgdata:
+  minio:

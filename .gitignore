@@ -1,0 +1,22 @@
+# Node
+node_modules
+.next
+dist
+# Python
+__pycache__/
+*.pyc
+.venv
+# Env
+.env
+apps/**/.env
+# OS
+.DS_Store
+# Containers
+.volumes
+# Coverage
+coverage/
+htmlcov/
+.coverage*
+# Logs
+logs/
+*.log
