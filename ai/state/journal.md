@@ -9,3 +9,4 @@
 - Implemented M2-DB: added Alembic baseline + SQLAlchemy ORM with pytest coverage (Context7 #1, #3, #6).
 - Next: wire API endpoints once DB verified (Context7 #4, #7).
 - Drafted M2-API FastAPI schemas plus /events + /incidents routes with validation and pagination tests (Context7 #1, #3, #7).
+- Completed M2-API: expanded filter coverage, refreshed docs, and ensured incident timelines update on ingest (Context7 #1, #3, #6, #7). Follow-up: kick off inline worker for features→scoring pipeline (Context7 #4, #5, #6).

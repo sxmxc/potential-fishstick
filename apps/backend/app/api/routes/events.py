@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -10,10 +10,16 @@ from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.sql import Select
 
 from app.api.schemas import EventCreate, EventResponse, PaginatedEvents
-from app.db import Event, EventMetric, EventTag
+from app.db import Event, EventMetric, EventTag, Incident
 from app.db.session import get_session
 
 router = APIRouter()
+
+
+def _normalize_to_utc(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
 
 def _apply_event_filters(
     stmt: Select[Any],
@@ -73,6 +79,12 @@ def create_event(event: EventCreate, session: Session = Depends(get_session)) ->
         for metric in event.metrics
     ]
     session.add(db_event)
+    if event.incident_id is not None:
+        incident = session.get(Incident, event.incident_id)
+        if incident is not None:
+            last_event_at = incident.last_event_at
+            if last_event_at is None or _normalize_to_utc(event.occurred_at) > _normalize_to_utc(last_event_at):
+                incident.last_event_at = event.occurred_at
     session.commit()
     session.refresh(db_event)
     return EventResponse.model_validate(db_event)
