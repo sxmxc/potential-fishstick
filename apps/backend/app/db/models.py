@@ -57,6 +57,10 @@ class Event(Base):
     def tags(self) -> list[str]:
         return [tag.value for tag in self.tag_rows]
 
+    @property
+    def entity(self) -> dict[str, str]:
+        return {"type": self.entity_type, "id": self.entity_id}
+
 
 class EventTag(Base):
     __tablename__ = "event_tags"
