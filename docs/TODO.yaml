@@ -1,19 +1,9 @@
 version: 1
-updated_at: "2025-09-21T00:00:00Z"
+updated_at: "2025-09-21T00:30:00Z"
 milestone: M2_e2e_path
 priority_scale: [P0, P1, P2, P3]
 
 backlog:
-  - id: M2-DB
-    title: "Implement SQLAlchemy models & Alembic migrations"
-    status: todo
-    priority: P0
-    depends_on: []
-    est_hours: 3
-    acceptance:
-      - "Alembic migration applies and downgrades cleanly"
-      - "CRUD unit tests pass"
-
   - id: M2-API
     title: "Add /events (POST/GET) and /incidents (GET) with validation"
     status: todo
@@ -56,6 +46,19 @@ backlog:
       - "black/ruff/mypy clean"
 
 in_progress: []
-done: []
+
+done:
+  - id: M2-DB
+    title: "Implement SQLAlchemy models & Alembic migrations"
+    status: done
+    priority: P0
+    depends_on: []
+    est_hours: 3
+    acceptance:
+      - "Alembic migration applies and downgrades cleanly"
+      - "CRUD unit tests pass"
+    notes:
+      - "Initial migrations + ORM coverage landed via pytest"
+
 notes:
   - "Codex should add any discovered sub-tasks here as it works."
