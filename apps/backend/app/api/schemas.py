@@ -36,6 +36,22 @@ class EntityRef(BaseModel):
     id: str
 
 
+class EventLink(BaseModel):
+    href: AnyHttpUrl
+    text: str | None = None
+    rel: str | None = None
+
+    model_config = ConfigDict(extra="allow")
+
+
+class EventMetricPayload(BaseModel):
+    name: str
+    value: float
+    unit: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class EventCreate(BaseModel):
     source: str
     occurred_at: datetime
@@ -46,8 +62,8 @@ class EventCreate(BaseModel):
     body: str | None = None
     severity_raw: str | None = None
     tags: list[str] = Field(default_factory=list)
-    metrics: list[dict[str, float | None]] = Field(default_factory=list)
-    links: list[dict[str, AnyHttpUrl | str | None]] = Field(default_factory=list)
+    metrics: list[EventMetricPayload] = Field(default_factory=list)
+    links: list[EventLink] = Field(default_factory=list)
     extras: dict[str, Any] = Field(default_factory=dict)
     features: dict[str, Any] = Field(default_factory=dict)
     score: float | None = None

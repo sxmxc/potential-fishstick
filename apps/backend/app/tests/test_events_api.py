@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from app.db import Incident
+from app.db import Event, Incident
 
 
 def test_events_and_incidents_flow(api_client) -> None:
@@ -15,6 +15,8 @@ def test_events_and_incidents_flow(api_client) -> None:
         event_type: str,
         title: str,
         tags: list[str],
+        links: list[dict] | None = None,
+        metrics: list[dict] | None = None,
     ) -> dict:
         return {
             "source": source,
@@ -24,6 +26,8 @@ def test_events_and_incidents_flow(api_client) -> None:
             "type": event_type,
             "title": title,
             "tags": tags,
+            "links": links or [],
+            "metrics": metrics or [],
         }
 
     def post_event(payload: dict) -> dict:
@@ -109,3 +113,54 @@ def test_events_and_incidents_flow(api_client) -> None:
             assert data["items"][0]["id"] == incident
         if count is not None:
             assert data["items"][0]["event_count"] == count
+
+
+def test_create_event_with_links_and_metrics(api_client) -> None:
+    client, session_factory = api_client
+    occurred_at = datetime(2025, 9, 22, 15, tzinfo=timezone.utc)
+    payload = {
+        "source": "fitbit",
+        "occurred_at": occurred_at.isoformat(),
+        "received_at": (occurred_at + timedelta(seconds=2)).isoformat(),
+        "entity": {"type": "user", "id": "user-123"},
+        "type": "health_alert",
+        "title": "High resting HR",
+        "tags": ["health"],
+        "links": [
+            {"href": "https://example.com/event", "text": "View"},
+            {"href": "https://example.com/details", "rel": "details", "text": None},
+        ],
+        "metrics": [
+            {"name": "resting_hr", "value": 80.0, "unit": "bpm"},
+            {"name": "stress_score", "value": 0.75},
+        ],
+    }
+
+    response = client.post("/events/", json=payload)
+    assert response.status_code == 201
+    data = response.json()
+
+    assert data["links"] == [
+        {"href": "https://example.com/event", "text": "View"},
+        {"href": "https://example.com/details", "rel": "details"},
+    ]
+    assert data["metrics"] == [
+        {"name": "resting_hr", "value": 80.0, "unit": "bpm"},
+        {"name": "stress_score", "value": 0.75},
+    ]
+
+    with session_factory() as session:
+        stored = session.get(Event, uuid.UUID(data["id"]))
+        assert stored is not None
+        assert stored.links == [
+            {"href": "https://example.com/event", "text": "View"},
+            {"href": "https://example.com/details", "rel": "details"},
+        ]
+        stored_metrics = {
+            (metric.name, metric.value, metric.unit)
+            for metric in stored.metrics
+        }
+        assert stored_metrics == {
+            ("resting_hr", 80.0, "bpm"),
+            ("stress_score", 0.75, None),
+        }
