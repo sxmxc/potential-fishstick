@@ -1,19 +1,9 @@
 version: 1
-updated_at: "2025-09-21T02:30:00Z"
+updated_at: "2025-09-21T04:00:00Z"
 milestone: M2_e2e_path
 priority_scale: [P0, P1, P2, P3]
 
 backlog:
-  - id: M2-PIPE
-    title: "Inline worker: features → score → explain → correlate"
-    status: todo
-    priority: P0
-    depends_on: [M2-API]
-    est_hours: 4
-    acceptance:
-      - "On POST, event scored and optionally merged to incident"
-      - "Unit + integration tests green"
-
   - id: M2-WEB
     title: "Web UI fetch /events & /incidents (replace demo)"
     status: todo
@@ -61,6 +51,18 @@ done:
       - "OpenAPI examples added"
     notes:
       - "Hardened filters plus incident timestamp upkeep with integration tests and docs updates (Context7 #1, #3, #6, #7)."
+
+  - id: M2-PIPE
+    title: "Inline worker: features → score → explain → correlate"
+    status: done
+    priority: P0
+    depends_on: [M2-API]
+    est_hours: 4
+    acceptance:
+      - "On POST, event scored and optionally merged to incident"
+      - "Unit + integration tests green"
+    notes:
+      - "Inline enrichment now computes features, scoring, and correlation with regression tests (Context7 #1, #4, #5, #6)."
 
 notes:
   - "Codex should add any discovered sub-tasks here as it works."
