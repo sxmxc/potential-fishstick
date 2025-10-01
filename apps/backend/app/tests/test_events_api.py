@@ -282,3 +282,76 @@ def test_create_event_with_links_and_metrics(api_client) -> None:
             ("resting_hr", 80.0, "bpm"),
             ("stress_score", 0.75, None),
         }
+
+
+def test_pipeline_scores_and_correlates_events(api_client) -> None:
+    client, session_factory = api_client
+    base_time = datetime(2025, 9, 24, 10, tzinfo=timezone.utc)
+    first_payload = {
+        "source": "alpaca",
+        "occurred_at": base_time.isoformat(),
+        "received_at": (base_time + timedelta(seconds=3)).isoformat(),
+        "entity": {"type": "portfolio", "id": "acct-123"},
+        "type": "price_move",
+        "title": "Portfolio drawdown",
+        "tags": ["finance", "portfolio"],
+        "metrics": [
+            {"name": "pct_change", "value": -0.07},
+            {"name": "pct_change_5m", "value": -0.05},
+        ],
+        "extras": {
+            "portfolio_exposure": 0.8,
+            "market_open": True,
+            "personal_relevance": 0.9,
+        },
+    }
+    first_response = client.post("/events/", json=first_payload)
+    assert first_response.status_code == 201
+    first = first_response.json()
+
+    assert first["features"]["impact_finance"] > 0
+    assert first["score"] > 0
+    assert first["explain"]["contributions"]["impact"] > 0
+    assert first.get("incident_id") is None
+
+    follow_up_time = base_time + timedelta(minutes=5)
+    second_payload = {
+        "source": "alpaca",
+        "occurred_at": follow_up_time.isoformat(),
+        "received_at": (follow_up_time + timedelta(seconds=3)).isoformat(),
+        "entity": {"type": "portfolio", "id": "acct-123"},
+        "type": "price_move",
+        "title": "Continued drawdown",
+        "tags": ["finance"],
+        "metrics": [
+            {"name": "pct_change", "value": -0.04},
+            {"name": "pct_change_5m", "value": -0.03},
+        ],
+        "extras": {
+            "portfolio_exposure": 0.8,
+            "market_open": True,
+            "personal_relevance": 0.9,
+        },
+    }
+    second_response = client.post("/events/", json=second_payload)
+    assert second_response.status_code == 201
+    second = second_response.json()
+
+    assert second["incident_id"] is not None
+
+    with session_factory() as session:
+        first_event = session.get(Event, uuid.UUID(first["id"]))
+        assert first_event is not None
+        assert first_event.incident_id is not None
+        assert first_event.incident_id == uuid.UUID(second["incident_id"])
+
+        incident = session.get(Incident, uuid.UUID(second["incident_id"]))
+        assert incident is not None
+        assert incident.last_event_at is not None
+        assert _normalize(incident.last_event_at) >= _normalize(follow_up_time)
+        assert incident.score is not None
+        assert incident.score >= second["score"]
+
+    incident_list = client.get("/incidents/").json()
+    assert incident_list["total"] == 1
+    assert incident_list["items"][0]["event_count"] == 2

@@ -10,3 +10,4 @@
 - Next: wire API endpoints once DB verified (Context7 #4, #7).
 - Drafted M2-API FastAPI schemas plus /events + /incidents routes with validation and pagination tests (Context7 #1, #3, #7).
 - Completed M2-API: expanded filter coverage, refreshed docs, and ensured incident timelines update on ingest (Context7 #1, #3, #6, #7). Follow-up: kick off inline worker for features→scoring pipeline (Context7 #4, #5, #6).
+- Completed M2-PIPE: wired inline enrichment to compute features, scores, explanations, and correlation on POST with regression tests covering incident merges (Context7 #1, #4, #5, #6). Follow-up: shift to web UI consuming the live API (Context7 #7).

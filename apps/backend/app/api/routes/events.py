@@ -12,6 +12,7 @@ from sqlalchemy.sql import Select
 from app.api.schemas import EventCreate, EventResponse, PaginatedEvents
 from app.db import Event, EventMetric, EventTag, Incident
 from app.db.session import get_session
+from app.ingest.pipeline import process_event
 
 router = APIRouter()
 
@@ -56,6 +57,8 @@ def _apply_event_filters(
 )
 def create_event(event: EventCreate, session: Session = Depends(get_session)) -> EventResponse:
     deduped_tags = list(dict.fromkeys(event.tags))
+    pipeline_result = process_event(event, session)
+    incident_id = pipeline_result.incident_id
     db_event = Event(
         source=event.source,
         occurred_at=event.occurred_at,
@@ -68,10 +71,10 @@ def create_event(event: EventCreate, session: Session = Depends(get_session)) ->
         severity_raw=event.severity_raw,
         links=[link.model_dump(mode="json", exclude_none=True) for link in event.links],
         extras=event.extras,
-        features=event.features,
-        score=event.score,
-        explain=event.explain,
-        incident_id=event.incident_id,
+        features=pipeline_result.features,
+        score=pipeline_result.score,
+        explain=pipeline_result.explain,
+        incident_id=incident_id,
     )
     db_event.tag_rows = [EventTag(value=value) for value in deduped_tags]
     db_event.metrics = [
@@ -79,12 +82,16 @@ def create_event(event: EventCreate, session: Session = Depends(get_session)) ->
         for metric in event.metrics
     ]
     session.add(db_event)
-    if event.incident_id is not None:
-        incident = session.get(Incident, event.incident_id)
+    if incident_id is not None:
+        incident = session.get(Incident, incident_id)
         if incident is not None:
             last_event_at = incident.last_event_at
             if last_event_at is None or _normalize_to_utc(event.occurred_at) > _normalize_to_utc(last_event_at):
                 incident.last_event_at = event.occurred_at
+            score_value = pipeline_result.score
+            if score_value is not None:
+                if incident.score is None or score_value > incident.score:
+                    incident.score = score_value
     session.commit()
     session.refresh(db_event)
     return EventResponse.model_validate(db_event)
