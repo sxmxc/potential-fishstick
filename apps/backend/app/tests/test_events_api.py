@@ -355,3 +355,69 @@ def test_pipeline_scores_and_correlates_events(api_client) -> None:
     incident_list = client.get("/incidents/").json()
     assert incident_list["total"] == 1
     assert incident_list["items"][0]["event_count"] == 2
+
+
+def test_pipeline_correlates_late_arrivals(api_client) -> None:
+    client, session_factory = api_client
+    base_time = datetime(2025, 9, 26, 9, tzinfo=timezone.utc)
+    later_time = base_time + timedelta(minutes=10)
+
+    initial_payload = {
+        "source": "alpaca",
+        "occurred_at": later_time.isoformat(),
+        "received_at": (later_time + timedelta(seconds=3)).isoformat(),
+        "entity": {"type": "portfolio", "id": "acct-456"},
+        "type": "price_move",
+        "title": "Late incident anchor",
+        "tags": ["finance", "portfolio"],
+        "metrics": [
+            {"name": "pct_change", "value": -0.05},
+            {"name": "pct_change_5m", "value": -0.04},
+        ],
+        "extras": {
+            "portfolio_exposure": 0.75,
+            "market_open": True,
+            "personal_relevance": 0.8,
+        },
+    }
+
+    initial_response = client.post("/events/", json=initial_payload)
+    assert initial_response.status_code == 201
+    initial = initial_response.json()
+    assert initial.get("incident_id") is None
+
+    late_payload = {
+        "source": "alpaca",
+        "occurred_at": base_time.isoformat(),
+        "received_at": (base_time + timedelta(minutes=15)).isoformat(),
+        "entity": {"type": "portfolio", "id": "acct-456"},
+        "type": "price_move",
+        "title": "Backfilled drawdown",
+        "tags": ["finance", "portfolio"],
+        "metrics": [
+            {"name": "pct_change", "value": -0.03},
+            {"name": "pct_change_5m", "value": -0.02},
+        ],
+        "extras": {
+            "portfolio_exposure": 0.75,
+            "market_open": True,
+            "personal_relevance": 0.8,
+        },
+    }
+
+    late_response = client.post("/events/", json=late_payload)
+    assert late_response.status_code == 201
+    late = late_response.json()
+    assert late["incident_id"] is not None
+
+    with session_factory() as session:
+        first_event = session.get(Event, uuid.UUID(initial["id"]))
+        backfilled_event = session.get(Event, uuid.UUID(late["id"]))
+        assert first_event is not None and backfilled_event is not None
+        incident_id = uuid.UUID(late["incident_id"])
+        assert first_event.incident_id == incident_id
+        assert backfilled_event.incident_id == incident_id
+
+        incident = session.get(Incident, incident_id)
+        assert incident is not None
+        assert _normalize(incident.last_event_at) == _normalize(later_time)

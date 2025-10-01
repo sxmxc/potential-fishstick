@@ -112,12 +112,13 @@ def _explain_score(features: dict[str, float], score_value: float) -> dict[str, 
 
 def _correlate(event: EventCreate, score_value: float, session: Session) -> UUID | None:
     lookback_start = event.occurred_at - timedelta(minutes=15)
+    lookahead_end = event.occurred_at + timedelta(minutes=15)
     new_view = _event_view(event)
     stmt = (
         select(EventModel)
         .options(selectinload(EventModel.tag_rows))
         .where(EventModel.occurred_at >= lookback_start)
-        .where(EventModel.occurred_at <= event.occurred_at)
+        .where(EventModel.occurred_at <= lookahead_end)
         .order_by(EventModel.occurred_at.desc())
         .limit(50)
     )
